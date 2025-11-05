@@ -1,26 +1,76 @@
-@import "tailwindcss";
+/* app/globals.css */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+button {
+  cursor: pointer;
+}
+
+/* Grid für Clubs */
+.clubs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Club-Karten */
+.club-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.club-card:hover {
+  transform: scale(1.05);
+}
+
+.club-card img {
+  width: 100%;          /* volle Breite der Karte */
+  height: auto;         /* Höhe automatisch, proportional */
+  max-height: 160px;    /* optional: maximale Höhe */
+  object-fit: contain;  /* Bild wird vollständig angezeigt */
+  border-bottom: 1px solid #eee;
+  border-radius: 12px 12px 0 0;
+  background-color: #f9f9f9; /* optional, Hintergrund falls Logos transparent */
+}
+
+.club-card-content {
+  padding: 12px;
+  text-align: center;
+}
+
+.filter-container {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.filter-container input,
+.filter-container select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
