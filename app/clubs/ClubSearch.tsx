@@ -172,7 +172,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
         </div>
 
         <h2>
-          (Suchergebnis: {filteredClubs.length} Clubs in {filteredCountryCount} Ländern)
+          (Anzahl Clubs: {filteredClubs.length} / Anzahl Länder: {filteredCountryCount} Ländern)
         </h2>
 
         <div className="club-grid">

@@ -124,3 +124,34 @@
 .star.active {
   color: #ffc107;
 }
+
+/* --- Responsive Filter Layout --- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.filters input,
+.filters select {
+  flex: 1 1 200px;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* Auf kleinen Geräten: Eingabefelder untereinander */
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters input,
+  .filters select {
+    width: 100%;
+  }
+}
+
