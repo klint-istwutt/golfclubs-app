@@ -137,14 +137,42 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   return (
     <div className="club-search-container">
       <div className="main-content">
-        {/* Login oberhalb der Filter */}
+        {/* Filterfelder */}
+        <div className="filters">
+          <input
+            type="text"
+            placeholder="Suche..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">Alle Länder</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <select value={city} onChange={(e) => setCity(e.target.value)}>
+            <option value="">Alle Städte</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Loginbereich unterhalb der Filter */}
         <div className="login-inline-container">
           <div
             className="login-inline-header"
             onClick={() => setLoginOpen((prev) => !prev)}
           >
             {user ? (
-              <p>Eingeloggt als <strong>{user.email}</strong> ▾</p>
+              <p>
+                Eingeloggt als <strong>{user.email}</strong> ▾
+              </p>
             ) : (
               <p>Nicht eingeloggt ▾</p>
             )}
@@ -153,11 +181,13 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
           {loginOpen && (
             <div className="login-inline-panel">
               {user ? (
-                <button onClick={handleLogout} className="btn logout-btn">
-                  Logout
-                </button>
+                <div className="logged-in">
+                  <button onClick={handleLogout} className="btn logout-btn">
+                    Logout
+                  </button>
+                </div>
               ) : (
-                <>
+                <div className="login-forms">
                   <input
                     type="email"
                     placeholder="E-Mail"
@@ -181,36 +211,15 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
                   <button onClick={handleResetPassword} className="link-btn">
                     Passwort vergessen?
                   </button>
-                </>
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Filterfelder */}
-        <div className="filters">
-          <input
-            type="text"
-            placeholder="Suche..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select value={country} onChange={(e) => setCountry(e.target.value)}>
-            <option value="">Alle Länder</option>
-            {countries.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <select value={city} onChange={(e) => setCity(e.target.value)}>
-            <option value="">Alle Städte</option>
-            {cities.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-
         <h2>
-          (Anzahl Clubs: {filteredClubs.length} / Anzahl Länder: {filteredCountryCount} Ländern)
+          (Anzahl Clubs: {filteredClubs.length} / Anzahl Länder:{" "}
+          {filteredCountryCount} Ländern)
         </h2>
 
         <div className="club-grid">

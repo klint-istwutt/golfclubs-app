@@ -24,7 +24,6 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginOpen, setLoginOpen] = useState(false);
 
   const supabase: SupabaseClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,29 +49,6 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-  };
-
-  // Registrierung
-  const handleRegister = async () => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) alert("Fehler bei Registrierung: " + error.message);
-    else alert("Registrierung erfolgreich! Bitte E-Mail bestätigen.");
-  };
-
-  // Passwort zurücksetzen
-  const handleResetPassword = async () => {
-    if (!email) {
-      alert("Bitte E-Mail-Adresse eingeben!");
-      return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    });
-    if (error) alert("Fehler beim Zurücksetzen: " + error.message);
-    else alert("E-Mail zum Zurücksetzen gesendet!");
   };
 
   // Filterlogik
@@ -136,58 +112,40 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
   return (
     <div className="club-search-container">
-      <div className="main-content">
-        {/* Login oberhalb der Filter */}
-        <div className="login-inline-container">
-          <div
-            className="login-inline-header"
-            onClick={() => setLoginOpen((prev) => !prev)}
-          >
-            {user ? (
-              <p>Eingeloggt als <strong>{user.email}</strong> ▾</p>
-            ) : (
-              <p>Nicht eingeloggt ▾</p>
-            )}
+      {/* Sidebar */}
+      <aside className="sidebar">
+        {user ? (
+          <div>
+            <p className="logged-in-as">Eingeloggt als:</p>
+            <p className="user-email">{user.email}</p>
+            <button onClick={handleLogout} className="btn logout-btn">
+              Logout
+            </button>
           </div>
+        ) : (
+          <div>
+            <h3>Login</h3>
+            <input
+              type="email"
+              placeholder="E-Mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              type="password"
+              placeholder="Passwort"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button onClick={handleLogin} className="btn login-btn">
+              Login
+            </button>
+          </div>
+        )}
+      </aside>
 
-          {loginOpen && (
-            <div className="login-inline-panel">
-              {user ? (
-                <button onClick={handleLogout} className="btn logout-btn">
-                  Logout
-                </button>
-              ) : (
-                <>
-                  <input
-                    type="email"
-                    placeholder="E-Mail"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Passwort"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <div className="login-buttons">
-                    <button onClick={handleLogin} className="btn login-btn">
-                      Login
-                    </button>
-                    <button onClick={handleRegister} className="btn register-btn">
-                      Registrieren
-                    </button>
-                  </div>
-                  <button onClick={handleResetPassword} className="link-btn">
-                    Passwort vergessen?
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Filterfelder */}
+      {/* Hauptinhalt */}
+      <div className="main-content">
         <div className="filters">
           <input
             type="text"
@@ -198,13 +156,17 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
           <select value={country} onChange={(e) => setCountry(e.target.value)}>
             <option value="">Alle Länder</option>
             {countries.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </select>
           <select value={city} onChange={(e) => setCity(e.target.value)}>
             <option value="">Alle Städte</option>
             {cities.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </select>
         </div>

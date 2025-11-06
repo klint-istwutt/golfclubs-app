@@ -67,8 +67,11 @@
 
 .club-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
+  justify-items: center;
+  align-items: start;
+  width: 100%;
 }
 
 .club-card {
@@ -127,6 +130,8 @@
 
 /* --- Responsive Filter Layout --- */
 
+/* --- Responsive Filter Layout (optimiert) --- */
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -136,22 +141,74 @@
 
 .filters input,
 .filters select {
-  flex: 1 1 200px;
-  padding: 8px;
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 100%;
+  padding: 8px 10px;
   font-size: 1rem;
+  line-height: 1.2;
+  height: 40px; /* Fixe, gleichmäßige Höhe */
   border: 1px solid #ccc;
   border-radius: 6px;
+  box-sizing: border-box;
 }
 
-/* Auf kleinen Geräten: Eingabefelder untereinander */
+/* Auf kleinen Geräten: Felder untereinander, aber gleich hoch */
 @media (max-width: 768px) {
   .filters {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .filters input,
   .filters select {
     width: 100%;
+    flex: none;
   }
 }
 
+/* Login unterhalb der Filter */
+/* Login unterhalb der Filter */
+.login-inline-container {
+  width: 100%;
+  max-width: 500px; /* maximale Breite */
+  margin: 0 auto 1rem; /* zentriert + Abstand nach unten */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.login-inline-header {
+  padding: 0.5rem 1rem;
+  background: #eee;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.login-inline-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 0.7rem;
+  gap: 0.5rem;
+}
+
+.login-inline-panel input {
+  padding: 0.5rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.login-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Club Grid */
+.club-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
