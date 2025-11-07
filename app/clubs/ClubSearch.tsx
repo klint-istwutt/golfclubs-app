@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
-import "./ClubSearch.css";
 import dynamic from "next/dynamic";
+import "./ClubSearch.css";
 
 interface Club {
   id: number;
@@ -20,23 +20,8 @@ interface ClubSearchProps {
   initialClubs?: Club[];
 }
 
-// Leaflet-Komponenten nur client-seitig importieren
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-const Marker = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Marker),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Popup),
-  { ssr: false }
-);
+// ClubMap dynamisch client-only importieren
+const ClubMap = dynamic(() => import("./ClubMap"), { ssr: false });
 
 export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [search, setSearch] = useState("");
@@ -46,35 +31,14 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [L, setLeaflet] = useState<any>(null);
 
   const supabase: SupabaseClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // --- Nur client-seitig ---
   useEffect(() => {
-    setMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
-
-    // Leaflet nur auf dem Client importieren
-    import("leaflet").then((Leaflet) => {
-      // Marker Fix
-      delete Leaflet.Icon.Default.prototype._getIconUrl;
-      Leaflet.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
-      setLeaflet(Leaflet);
-      // Dynamisches Laden der CSS
-      import("leaflet/dist/leaflet.css");
-    });
   }, []);
 
   // --- Filter ---
@@ -141,8 +105,10 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   };
 
   // Map Center
-  const firstClub = filteredClubs.find(c => c.lat && c.lon);
-  const mapCenter = firstClub ? [firstClub.lat!, firstClub.lon!] : [0,0];
+  const firstClubWithCoords = filteredClubs.find(c => c.lat && c.lon);
+  const mapCenter: [number, number] = firstClubWithCoords
+    ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!]
+    : [0, 0];
 
   return (
     <div className="club-search-container">
@@ -154,7 +120,9 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
           </div>
           {loginOpen && (
             <div className="login-inline-panel">
-              {user ? <button onClick={() => supabase.auth.signOut() && setUser(null)} className="btn logout-btn">Logout</button> : (
+              {user ? (
+                <button onClick={() => supabase.auth.signOut() && setUser(null)} className="btn logout-btn">Logout</button>
+              ) : (
                 <>
                   <input type="email" placeholder="E-Mail" value={email} onChange={e => setEmail(e.target.value)} />
                   <input type="password" placeholder="Passwort" value={password} onChange={e => setPassword(e.target.value)} />
@@ -183,29 +151,8 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
 
-        {/* Map nur client-seitig */}
-        {mounted && L && firstClub && (
-          <MapContainer
-            style={{ height:400, width:"100%", marginTop:20, borderRadius:12 }}
-            center={mapCenter}
-            zoom={4}
-            scrollWheelZoom
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {filteredClubs.map(c => c.lat && c.lon && (
-              <Marker key={c.id} position={[c.lat!, c.lon!]}>
-                <Popup>
-                  <strong>{c.name}</strong><br />
-                  {c.city}, {c.country}<br />
-                  Rating: {c.rating?.toFixed(1)}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        )}
+        {/* Map */}
+        <ClubMap clubs={filteredClubs} mapCenter={mapCenter} />
 
         <div className="club-grid">
           {filteredClubs.map(club => <ClubCard key={club.id} club={club} />)}
