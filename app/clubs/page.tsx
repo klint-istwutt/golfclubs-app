@@ -25,10 +25,10 @@ export default async function ClubsPage() {
   return (
     <main style={{ padding: "5px" }}>
       <h1 style={{ textAlign: "center", fontSize: "2rem", marginBottom: "2px" }}>
-        Herzlich Willkommen bei Tee-Time
+        Herzlich Willkommen
       </h1>
       <h1 style={{ textAlign: "center", fontSize: "1rem", marginBottom: "10px" }}>
-        Informationen zu aktuell:
+        Sie haben Zugriff auf Informationen zu aktuell:
       </h1>
       <h1 style={{ textAlign: "center", fontSize: "1.5rem", marginBottom: "24px" }}>
         {clubCount} Golfclubs in {countryCount} Ländern
