@@ -238,3 +238,9 @@
   width: 50%;
   overflow: hidden;
 }
+
+/* Visuelles Feedback, wenn STRG gedrückt ist */
+.leaflet-container.ctrl-zoom-active {
+  cursor: grab;
+  border: 2px dashed #28a745;
+}
