@@ -47,7 +47,7 @@ useEffect(() => {
 
   // Erste Club-Koordinaten als Map-Center
   const first = clubs.find((c) => c.lat && c.lon);
-  const mapCenter: [number, number] = first ? [first.lat!, first.lon!] : [0, 0];
+  const mapCenter: [number, number] = [51.505, -0.09];
 
   if (!mounted || !first) return null;
 
