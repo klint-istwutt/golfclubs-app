@@ -1,7 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Club } from "./types"; // Club Typ vom Hauptcode
+import { useEffect, useState } from "react";
+
+// --- Typen direkt hier definiert ---
+interface Club {
+  id: number;
+  name: string;
+  city: string;
+  country: string;
+  logo_url?: string;
+  rating?: number;
+  lat?: number;
+  lon?: number;
+}
 
 interface ClubMapProps {
   clubs: Club[];
@@ -25,14 +37,12 @@ const Popup: any = dynamic(
   { ssr: false }
 );
 
-import { useEffect, useState } from "react";
-
 export default function ClubMap({ clubs }: ClubMapProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // CSS nur client-seitig laden
+    // Leaflet CSS nur client-seitig laden
     import("leaflet/dist/leaflet.css");
   }, []);
 
