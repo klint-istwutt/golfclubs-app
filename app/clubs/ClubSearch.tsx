@@ -3,12 +3,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import "./ClubSearch.css";
-import "leaflet/dist/leaflet.css";
 import dynamic from "next/dynamic";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 // --- Typen ---
-interface Club {
+export interface Club {
   id: number;
   name: string;
   city: string;
@@ -23,10 +23,23 @@ interface ClubSearchProps {
   initialClubs?: Club[];
 }
 
-// --- Client-only Leaflet Map Import ---
-const ClubMap = dynamic(() => import("./ClubMap"), { ssr: false });
+// --- Leaflet Icon Fix ---
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
-// --- Supabase Setup ---
+// --- Dynamischer Import für Next.js ---
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
+
 export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("");
@@ -41,11 +54,11 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // --- Login Status prüfen ---
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
   }, [supabase]);
 
-  // --- Auth-Handler ---
   const handleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) alert(error.message);
@@ -53,7 +66,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   };
   const handleLogout = async () => { await supabase.auth.signOut(); setUser(null); };
   const handleRegister = async () => { const { error } = await supabase.auth.signUp({ email, password }); if (error) alert(error.message); else alert("Registrierung erfolgreich!"); };
-  const handleResetPassword = async () => { if (!email) { alert("Bitte E-Mail-Adresse eingeben!"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if (error) alert(error.message); else alert("E-Mail zum Zurücksetzen gesendet!"); };
+  const handleResetPassword = async () => { if (!email) { alert("Bitte E-Mail eingeben"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if (error) alert(error.message); else alert("E-Mail gesendet!"); };
 
   // --- Filterung ---
   const filteredAllClubs = useMemo(() => {
@@ -68,10 +81,12 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     });
   }, [search, country, city, initialClubs]);
 
+  // --- Top 100 nach Rating ---
   const filteredClubs = useMemo(() => {
     return [...filteredAllClubs].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 100);
   }, [filteredAllClubs]);
 
+  // --- Länder und Städte für Dropdowns ---
   const filteredCountryCount = useMemo(() => new Set(filteredClubs.map(c => c.country)).size, [filteredClubs]);
   const countries = useMemo(() => Array.from(new Set(initialClubs.map(c => c.country))).sort(), [initialClubs]);
   const cities = useMemo(() => {
@@ -102,10 +117,13 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     );
   };
 
+  // --- Karte ---
+  const firstWithCoords = filteredClubs.find(c => c.lat !== undefined && c.lon !== undefined);
+  const mapCenter: [number, number] = firstWithCoords ? [firstWithCoords.lat!, firstWithCoords.lon!] : [0, 0];
+
   return (
     <div className="club-search-container">
       <div className="main-content">
-
         {/* Login */}
         <div className="login-inline-container">
           <div className="login-inline-header" onClick={() => setLoginOpen(prev => !prev)}>
@@ -128,7 +146,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         {/* Filter */}
         <div className="filters">
-          <input type="text" placeholder="aktuell werden die 100 'besten' Clubs angezeigt..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Suche..." value={search} onChange={e => setSearch(e.target.value)} />
           <select value={country} onChange={e => setCountry(e.target.value)}>
             <option value="">Alle Länder</option>
             {countries.map(c => <option key={c} value={c}>{c}</option>)}
@@ -141,14 +159,34 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
 
-        {/* Client-only Map */}
-		{filteredClubs.some(c => c.lat && c.lon) && <ClubMap clubs={filteredClubs} />}
+        {/* Map */}
+        {firstWithCoords && (
+          <MapContainer
+            style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "12px" }}
+            center={mapCenter}
+            zoom={4}
+            scrollWheelZoom={true}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {filteredClubs.map(club => club.lat && club.lon && (
+              <Marker key={club.id} position={[club.lat, club.lon]}>
+                <Popup>
+                  <strong>{club.name}</strong><br/>
+                  {club.city}, {club.country}<br/>
+                  Rating: {club.rating?.toFixed(1)}
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        )}
 
-        {/* Club Grid */}
+        {/* ClubCards */}
         <div className="club-grid">
           {filteredClubs.map(club => <ClubCard key={club.id} club={club} />)}
         </div>
-
       </div>
     </div>
   );
