@@ -4,8 +4,17 @@ import { useState, useMemo, useEffect } from "react";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import "./ClubSearch.css";
 import "leaflet/dist/leaflet.css";
-import dynamic from "next/dynamic";
-import L, { LatLngExpression } from "leaflet";
+
+import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+
+// Leaflet Standard-Marker Fix
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 interface Club {
   id: number;
@@ -22,20 +31,6 @@ interface ClubSearchProps {
   initialClubs?: Club[];
 }
 
-// Dynamischer Import von Leaflet-Komponenten, nur Client-seitig
-const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import("react-leaflet").then(mod => mod.Popup), { ssr: false });
-
-// Standard Marker Fix
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
-
 export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("");
@@ -50,33 +45,49 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Prüfe Login-Status
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
   }, [supabase]);
 
-  // --- Auth-Funktionen ---
   const handleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) alert(error.message);
     else setUser(data.user);
   };
-  const handleLogout = async () => { await supabase.auth.signOut(); setUser(null); };
-  const handleRegister = async () => { const { error } = await supabase.auth.signUp({ email, password }); if (error) alert(error.message); else alert("Registrierung erfolgreich!"); };
-  const handleResetPassword = async () => { if (!email) { alert("Bitte E-Mail!"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if (error) alert(error.message); else alert("E-Mail gesendet!"); };
 
-  // --- Filterung ---
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const handleRegister = async () => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) alert(error.message);
+    else alert("Registrierung erfolgreich! Bitte E-Mail bestätigen.");
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) { alert("Bitte E-Mail-Adresse eingeben!"); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) alert(error.message);
+    else alert("E-Mail zum Zurücksetzen gesendet!");
+  };
+
+  // --- Filterung auf allen Clubs ---
   const filteredAllClubs = useMemo(() => {
-    return initialClubs.filter(c => {
+    return initialClubs.filter((club) => {
       const matchText =
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.city.toLowerCase().includes(search.toLowerCase()) ||
-        c.country.toLowerCase().includes(search.toLowerCase());
-      const matchCountry = country ? c.country === country : true;
-      const matchCity = city ? c.city === city : true;
+        club.name.toLowerCase().includes(search.toLowerCase()) ||
+        club.city.toLowerCase().includes(search.toLowerCase()) ||
+        club.country.toLowerCase().includes(search.toLowerCase());
+      const matchCountry = country ? club.country === country : true;
+      const matchCity = city ? club.city === city : true;
       return matchText && matchCountry && matchCity;
     });
   }, [search, country, city, initialClubs]);
 
+  // --- Nur die Top 100 nach Rating ---
   const filteredClubs = useMemo(() => {
     return [...filteredAllClubs].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 100);
   }, [filteredAllClubs]);
@@ -84,21 +95,25 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const filteredCountryCount = useMemo(() => new Set(filteredClubs.map(c => c.country)).size, [filteredClubs]);
 
   const countries = useMemo(() => Array.from(new Set(initialClubs.map(c => c.country))).sort(), [initialClubs]);
+
   const cities = useMemo(() => {
     const clubsToUse = country ? initialClubs.filter(c => c.country === country) : initialClubs;
     return Array.from(new Set(clubsToUse.map(c => c.city))).sort();
   }, [initialClubs, country]);
 
-  // --- ClubCard ---
+  // ClubCard-Komponente
   const ClubCard = ({ club }: { club: Club }) => {
-    const [rating, setRating] = useState(club.rating || 0);
+    const [rating, setRating] = useState<number>(club.rating || 0);
+
     const handleRating = async (value: number) => {
       if (!user) { alert("Bitte einloggen!"); return; }
       setRating(value);
       const { error } = await supabase.from("clubs").update({ rating: value }).eq("id", club.id);
       if (error) alert(error.message);
     };
+
     const getStarClass = (index: number) => rating >= index ? "star active" : rating >= index - 0.5 ? "star half" : "star";
+
     return (
       <div className="club-card">
         <img src={club.logo_url} alt={club.name} className="club-logo" />
@@ -112,9 +127,9 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     );
   };
 
-  // --- Karte center ---
-  const mapCenter: LatLngExpression = filteredClubs[0]?.lat && filteredClubs[0]?.lon
-    ? [filteredClubs[0].lat, filteredClubs[0].lon]
+  // Map Center ermitteln
+  const mapCenter: [number, number] = filteredClubs[0] && filteredClubs[0].lat && filteredClubs[0].lon
+    ? [filteredClubs[0].lat!, filteredClubs[0].lon!]
     : [0, 0];
 
   return (
@@ -155,11 +170,11 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
 
-        {/* Leaflet Karte */}
-        {filteredClubs.some(c => c.lat && c.lon) && typeof window !== "undefined" && (
-          <MapContainer
+        {/* Karte nur anzeigen, wenn Koordinaten vorhanden */}
+        {filteredClubs.some(c => c.lat && c.lon) && (
+          <LeafletMapContainer
             style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "12px" }}
-            center={mapCenter}
+            center={mapCenter as any}   // <-- TypeScript akzeptiert center
             zoom={4}
             scrollWheelZoom={true}
           >
@@ -168,7 +183,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {filteredClubs.map(club => club.lat && club.lon && (
-              <Marker key={club.id} position={[club.lat, club.lon] as LatLngExpression}>
+              <Marker key={club.id} position={[club.lat, club.lon] as any}>
                 <Popup>
                   <strong>{club.name}</strong><br />
                   {club.city}, {club.country}<br />
@@ -176,10 +191,9 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
                 </Popup>
               </Marker>
             ))}
-          </MapContainer>
+          </LeafletMapContainer>
         )}
 
-        {/* ClubCards */}
         <div className="club-grid">
           {filteredClubs.map(club => <ClubCard key={club.id} club={club} />)}
         </div>
