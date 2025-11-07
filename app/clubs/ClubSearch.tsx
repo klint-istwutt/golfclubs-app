@@ -143,24 +143,30 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         {/* Karte nur anzeigen, wenn Koordinaten vorhanden */}
         {filteredClubs.some(c => c.lat && c.lon) && (
-          <MapContainer
-            style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "12px" }}
-            center={[filteredClubs[0].lat || 0, filteredClubs[0].lon || 0]}
-            zoom={4}
-            scrollWheelZoom={true}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {filteredClubs.map(club => club.lat && club.lon && (
-              <Marker key={club.id} position={[club.lat, club.lon]}>
-                <Popup>
-                  <strong>{club.name}</strong><br />{club.city}, {club.country}<br />Rating: {club.rating?.toFixed(1)}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+      
+
+// ...
+<MapContainer
+  style={{ height: "400px", width: "100%", marginTop: "20px", borderRadius: "12px" }}
+  center={filteredClubs[0] ? [filteredClubs[0].lat!, filteredClubs[0].lon!] as L.LatLngExpression : [0, 0]}
+  zoom={4}
+  scrollWheelZoom={true}
+>
+  <TileLayer
+    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  />
+  {filteredClubs.map((club) => club.lat && club.lon && (
+    <Marker key={club.id} position={[club.lat, club.lon] as L.LatLngExpression}>
+      <Popup>
+        <strong>{club.name}</strong><br />
+        {club.city}, {club.country}<br />
+        Rating: {club.rating?.toFixed(1)}
+      </Popup>
+    </Marker>
+  ))}
+</MapContainer>
+
         )}
 
         <div className="club-grid">
