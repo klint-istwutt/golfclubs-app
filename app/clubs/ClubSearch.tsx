@@ -142,7 +142,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
         <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
 
         {/* Client-only Map */}
-        {filteredClubs.some(c => c.lat && c.lon) && <ClubMap clubs={filteredClubs} />}
+		{filteredClubs.some(c => c.lat && c.lon) && <ClubMap clubs={filteredClubs} />}
 
         {/* Club Grid */}
         <div className="club-grid">
