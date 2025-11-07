@@ -40,11 +40,10 @@ const Popup: any = dynamic(
 export default function ClubMap({ clubs }: ClubMapProps) {
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    // Leaflet CSS nur client-seitig laden
-    import("leaflet/dist/leaflet.css");
-  }, []);
+useEffect(() => {
+  setMounted(true);
+  import("leaflet/dist/leaflet.css");
+}, []);
 
   // Erste Club-Koordinaten als Map-Center
   const first = clubs.find((c) => c.lat && c.lon);
