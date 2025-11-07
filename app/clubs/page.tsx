@@ -7,10 +7,17 @@ export default async function ClubsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: clubs, error } = await supabase.from("clubs").select("*");
-  if (error) console.error("Supabase error:", error.message);
+  // 1️⃣ Gesamte Anzahl der Clubs abfragen
+  const { count: clubCount, error: countError } = await supabase
+    .from("clubs")
+    .select("*", { count: "exact", head: true });
 
-  const clubCount = clubs?.length ?? 0;
+  if (countError) console.error("Supabase count error:", countError.message);
+
+  // 2️⃣ Alle Zeilen laden (falls benötigt, z.B. für ClubSearch)
+  const { data: clubs, error } = await supabase.from("clubs").select("*");
+  if (error) console.error("Supabase data error:", error.message);
+
   const countryCount = clubs
     ? new Set(clubs.map((c) => c.country)).size
     : 0;
@@ -21,7 +28,7 @@ export default async function ClubsPage() {
         Herzlich Willkommen bei Tee-Time
       </h1>
       <h1 style={{ textAlign: "center", fontSize: "1rem", marginBottom: "10px" }}>
-        Unsere Datenbank enthält aktuell:
+        Informationen zu aktuell:
       </h1>
       <h1 style={{ textAlign: "center", fontSize: "1.5rem", marginBottom: "24px" }}>
         {clubCount} Golfclubs in {countryCount} Ländern

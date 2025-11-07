@@ -212,3 +212,29 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
 }
+
+.star {
+  font-size: 22px;
+  color: #ccc; /* leere Sterne */
+  cursor: pointer;
+  transition: color 0.2s ease;
+  position: relative;
+  display: inline-block;
+}
+
+.star.active {
+  color: #ffc107; /* volle Sterne */
+}
+
+.star.half {
+  color: #ccc; /* Hintergrund leer */
+}
+
+.star.half::before {
+  content: "★";
+  color: #ffc107;
+  position: absolute;
+  left: 0;
+  width: 50%;
+  overflow: hidden;
+}
