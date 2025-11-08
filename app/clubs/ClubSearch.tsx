@@ -31,6 +31,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
+  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
 
   const supabase: SupabaseClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,36 +76,86 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     return Array.from(new Set(clubsToUse.map(c => c.city))).sort();
   }, [initialClubs, country]);
 
-  const ClubCard = ({ club }: { club: Club }) => {
-    const [rating, setRating] = useState<number>(club.rating || 0);
-    const handleRating = async (value: number) => {
-      if (!user) {
-        alert("Bitte einloggen!");
-        return;
-      }
-      setRating(value);
-      const { error } = await supabase.from("clubs").update({ rating: value }).eq("id", club.id);
-      if (error) alert(error.message);
-    };
-    const getStarClass = (index: number) =>
-      rating >= index ? "star active" : rating >= index - 0.5 ? "star half" : "star";
+  // --- ClubCard ---
+  const ClubCard = ({ club }: { club: Club }) => (
+    <div className="club-card" onClick={() => setSelectedClub(club)}>
+      <img src={club.logo_url} alt={club.name} className="club-logo" />
+      <h3>{club.name}</h3>
+      <p>{club.city}, {club.country}</p>
+    </div>
+  );
 
-    return (
-      <div className="club-card">
-        <img src={club.logo_url} alt={club.name} className="club-logo" />
-        <h3>{club.name}</h3>
+  // --- Overlay ---
+const ClubOverlay = ({ club, onClose }: { club: Club; onClose: () => void }) => {
+  const [rating, setRating] = useState<number>(club.rating || 0);
+  const [scale, setScale] = useState(0.8);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    // sanftes Aufblenden
+    const timeout = setTimeout(() => setScale(1), 10);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  const handleClose = () => {
+    setClosing(true);
+    setScale(0.8); // sanft wieder verkleinern
+    setTimeout(onClose, 300); // nach Animation Overlay entfernen
+  };
+
+  const handleRating = async (value: number) => {
+    if (!user) {
+      alert("Bitte einloggen!");
+      return;
+    }
+    setRating(value);
+
+    const { error } = await supabase
+      .from("ratings")
+      .insert([{ club_id: club.id, user_uuid: user.id, rating: value }]);
+    if (error) {
+      alert(error.message);
+    } else {
+      const { data: ratings } = await supabase
+        .from("ratings")
+        .select("rating")
+        .eq("club_id", club.id);
+      const newRating =
+        ratings && ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+          : value;
+      await supabase.from("clubs").update({ rating: newRating }).eq("id", club.id);
+    }
+  };
+
+  const getStarClass = (index: number) =>
+    rating >= index ? "star active" : rating >= index - 0.5 ? "star half" : "star";
+
+  return (
+    <div
+      className={`overlay-backdrop ${closing ? "fadeOut" : ""}`}
+      onClick={handleClose}
+    >
+      <div
+        className="overlay-content"
+        onClick={e => e.stopPropagation()}
+        style={{ transform: `scale(${scale})`, transition: "transform 0.3s ease" }}
+      >
+        <button className="overlay-close" onClick={handleClose}>✕</button>
+        <img src={club.logo_url} alt={club.name} className="club-logo-large" />
+        <h2>{club.name}</h2>
         <p>{club.city}, {club.country}</p>
         <div className="stars">
           {[1,2,3,4,5].map(i => (
             <span key={i} onClick={() => handleRating(i)} className={getStarClass(i)}>★</span>
           ))}
-          <span style={{ marginLeft:6, fontSize:"0.9rem", color:"#555" }}>{rating.toFixed(1)}</span>
+          <span style={{ marginLeft:6, fontSize:"1rem", color:"#555" }}>{rating.toFixed(1)}</span>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
-  // Map Center
   const firstClubWithCoords = filteredClubs.find(c => c.lat && c.lon);
   const mapCenter: [number, number] = firstClubWithCoords
     ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!]
@@ -152,11 +203,19 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
         <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
 
         {/* Map */}
-        <ClubMap clubs={filteredClubs} mapCenter={mapCenter} />
+        <ClubMap
+          clubs={filteredClubs}
+          mapCenter={mapCenter}
+          onMarkerClick={(club) => setSelectedClub(club)}
+        />
 
+        {/* Club Grid */}
         <div className="club-grid">
           {filteredClubs.map(club => <ClubCard key={club.id} club={club} />)}
         </div>
+
+        {/* Overlay */}
+        {selectedClub && <ClubOverlay club={selectedClub} onClose={() => setSelectedClub(null)} />}
       </div>
     </div>
   );

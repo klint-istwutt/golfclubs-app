@@ -1,7 +1,7 @@
 "use client";
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import type { LatLngExpression } from "leaflet";
+import type { LatLngExpression, LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
 import L from "leaflet";
@@ -19,16 +19,15 @@ interface Club {
 interface ClubMapProps {
   clubs: Club[];
   mapCenter: LatLngExpression;
+  onMarkerClick?: (club: Club) => void;
 }
 
-// 🧭 Steuerungskomponente (separat, um Map-Instanz zu bekommen)
+// 🧭 STRG + Scroll aktivieren
 function MapControl() {
   const map = useMap();
 
   useEffect(() => {
-    // Standardmäßig: Kein Scroll-Zoom
     map.scrollWheelZoom.disable();
-
     const container = map.getContainer();
 
     const enableCtrlZoom = (e: KeyboardEvent) => {
@@ -37,7 +36,6 @@ function MapControl() {
         container.classList.add("ctrl-zoom-active");
       }
     };
-
     const disableCtrlZoom = (e: KeyboardEvent) => {
       if (e.key === "Control") {
         map.scrollWheelZoom.disable();
@@ -45,7 +43,6 @@ function MapControl() {
       }
     };
 
-    // Zwei-Finger-Zoom bleibt aktiv für Touchgeräte
     map.touchZoom.enable();
     map.doubleClickZoom.disable();
 
@@ -61,47 +58,58 @@ function MapControl() {
   return null;
 }
 
-export default function ClubMap({ clubs, mapCenter }: ClubMapProps) {
+// 🗺️ Auto-Zoom
+function FitBounds({ clubs }: { clubs: Club[] }) {
+  const map = useMap();
+
   useEffect(() => {
-    // Leaflet Marker fixen (Pfadproblem vermeiden)
+    const coords = clubs
+      .filter((c) => c.lat && c.lon)
+      .map((c) => [c.lat!, c.lon!]) as [number, number][];
+
+    if (coords.length > 1) {
+      const bounds: LatLngBoundsExpression = coords;
+      map.fitBounds(bounds, { padding: [40, 40] });
+    } else if (coords.length === 1) {
+      map.setView(coords[0], 10);
+    }
+  }, [clubs, map]);
+
+  return null;
+}
+
+export default function ClubMap({ clubs, mapCenter, onMarkerClick }: ClubMapProps) {
+  useEffect(() => {
     L.Icon.Default.mergeOptions({
       iconRetinaUrl:
         "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
     });
   }, []);
 
   return (
     <MapContainer
-      style={{
-        height: 400,
-        width: "100%",
-        marginTop: 20,
-        borderRadius: 12,
-        zIndex: 0,
-      }}
+      style={{ height: 400, width: "100%", marginTop: 20, borderRadius: 12, zIndex: 0 }}
       center={mapCenter}
       zoom={4}
-      scrollWheelZoom={false} // Initial deaktiviert
+      scrollWheelZoom={false}
     >
-      {/* Tile Layer */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-
-      {/* STRG-/Touch-Steuerung aktivieren */}
       <MapControl />
-
-      {/* Marker */}
+      <FitBounds clubs={clubs} />
       {clubs.map(
         (c) =>
           c.lat &&
           c.lon && (
-            <Marker key={c.id} position={[c.lat, c.lon]}>
+            <Marker
+              key={c.id}
+              position={[c.lat, c.lon]}
+              eventHandlers={{ click: () => onMarkerClick?.(c) }}
+            >
               <Popup>
                 <strong>{c.name}</strong>
                 <br />
