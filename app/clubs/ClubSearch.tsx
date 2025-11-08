@@ -10,7 +10,7 @@ interface Club {
   name: string;
   city: string;
   country: string;
-  logo_url: string;
+  logo_url?: string;
   rating?: number;
   lat?: number;
   lon?: number;
