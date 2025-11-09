@@ -39,7 +39,6 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Check user on mount
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
   }, []);
@@ -158,7 +157,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   };
 
   // --- Map Center ---
-  const firstClubWithCoords = filteredClubs.find(c => typeof c.lat === "number" && typeof c.lon === "number");
+  const firstClubWithCoords = filteredClubs.find(c => c.lat && c.lon);
   const mapCenter: [number, number] = firstClubWithCoords
     ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!]
     : [0, 0];
@@ -166,44 +165,25 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
   return (
     <div className="club-search-container">
       <div className="main-content">
+        {/* Login Button */}
+        <div className="login-inline-container">
+          <button className="btn login-btn" onClick={() => setLoginOpen(true)}>
+            {user ? `Eingeloggt als ${user.email}` : "Login / Registrierung"}
+          </button>
+        </div>
 
-{/* Login Button / Status */}
-<div className="login-inline-container">
-  <button
-    className="btn login-btn"
-    onClick={() => setLoginOpen(prev => !prev)}
-  >
-    {user ? `Eingeloggt als ${user.email} ▾` : "Login / Registrierung ▾"}
-  </button>
-
-  {loginOpen && (
-    <div className="login-inline-panel">
-      {user ? (
-        <button
-          className="btn logout-btn"
-          onClick={async () => {
-            await supabase.auth.signOut();
-            setUser(null);
-            setLoginOpen(false);
-          }}
-        >
-          Logout
-        </button>
-      ) : (
-        <LoginModal
-          email={email}
-          setEmail={setEmail}
-          password={password}
-          setPassword={setPassword}
-          onClose={() => setLoginOpen(false)}
-          setUser={setUser}
-          supabase={supabase}
-        />
-      )}
-    </div>
-  )}
-</div>
-
+        {/* Login Modal */}
+        {loginOpen && (
+          <LoginModal
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            onClose={() => setLoginOpen(false)}
+            setUser={setUser}
+            supabase={supabase}
+          />
+        )}
 
         {/* Filter */}
         <div className="filters">
