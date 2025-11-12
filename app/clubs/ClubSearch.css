@@ -420,3 +420,39 @@
   color: #ffc107;
   clip-path: inset(0 50% 0 0); /* nur linke Hälfte sichtbar */
 }
+
+.leaflet-container.ctrl-zoom-active {
+  cursor: grab;
+}
+
+.leaflet-container:not(.ctrl-zoom-active) {
+  cursor: not-allowed;
+}
+
+.leaflet-container {
+  touch-action: pinch-zoom; /* erlaubt nur 2-Finger-Gesten */
+}
+
+/* --- Hinweis-Overlay für Leaflet --- */
+.map-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 999;
+  pointer-events: none; /* verhindert, dass die Maus die Karte blockiert */
+  opacity: 0.9;
+}
+
+.map-hint strong {
+  color: #ffc107;
+}
+
+.leaflet-container.ctrl-zoom-active + .map-hint {
+  display: none; /* Hinweis ausblenden, wenn STRG oder ⌘ gedrückt ist */
+}
