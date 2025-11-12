@@ -58,7 +58,7 @@ function MapControl() {
   return null;
 }
 
-// 🗺️ Auto-Zoom
+// 🗺️ Auto-Zoom auf alle Clubs
 function FitBounds({ clubs }: { clubs: Club[] }) {
   const map = useMap();
 

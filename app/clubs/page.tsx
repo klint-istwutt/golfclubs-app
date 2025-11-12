@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import ClubSearch from "./ClubSearch";
+import Link from "next/link"; // Für Next.js Links
 
 export default async function ClubsPage() {
   const supabase = createClient(
@@ -24,10 +25,32 @@ export default async function ClubsPage() {
 
   return (
     <main style={{ padding: "5px" }}>
-      <h1 style={{ textAlign: "center", fontSize: "1.5rem", marginBottom: "24px" }}>
+      <h1
+        style={{
+          textAlign: "center",
+          fontSize: "1.5rem",
+          marginBottom: "24px",
+        }}
+      >
         {clubCount} Golfclubs in {countryCount} Ländern
       </h1>
+
       <ClubSearch initialClubs={clubs || []} />
+
+      {/* Footer mit Links */}
+      <footer
+        style={{
+          marginTop: "40px",
+          textAlign: "center",
+          fontSize: "0.9rem",
+          color: "#555",
+        }}
+      >
+        <Link href="/impressum" style={{ marginRight: "15px" }}>
+          Impressum
+        </Link>
+        <Link href="/datenschutz">Datenschutzerklärung</Link>
+      </footer>
     </main>
   );
 }
