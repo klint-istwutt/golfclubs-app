@@ -128,7 +128,7 @@ export default function ClubMap({ clubs, mapCenter, onMarkerClick }: ClubMapProp
                   <br />
                   {c.city}, {c.country}
                   <br />
-                  Rating: {c.rating?.toFixed(1)}
+                  Rating: {c.avg_rating?.toFixed(1)}
                 </Popup>
               </Marker>
             )
