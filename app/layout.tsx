@@ -1,4 +1,6 @@
+// app/layout.tsx
 import "./globals.css";
+import Header from "./components/Header";
 
 export const metadata = {
   title: "Golfclubs",
@@ -12,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body className="relative">
+        <Header />
+        {/* padding-top, damit Inhalt nicht unter Header verschwindet */}
+        <main className="pt-24">{children}</main>
+      </body>
     </html>
   );
 }
