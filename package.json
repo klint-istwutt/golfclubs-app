@@ -15,7 +15,9 @@
     "@emotion/styled": "^11.14.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
-    "@supabase/supabase-js": "^2.78.0",
+    "@supabase/supabase-js": "^2.84.0",
+    "cloudinary": "^2.8.0",
+    "dotenv": "^17.2.3",
     "framer-motion": "^12.23.24",
     "leaflet": "^1.9.4",
     "next": "^16.0.1",
@@ -32,5 +34,19 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "typescript": "^5"
-  }
+  },
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/klint-istwutt/golfclubs-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/klint-istwutt/golfclubs-app/issues"
+  },
+  "homepage": "https://github.com/klint-istwutt/golfclubs-app#readme"
 }

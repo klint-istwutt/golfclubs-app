@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import dynamic from "next/dynamic";
 import { LoginModal } from "./LoginModal";
@@ -10,26 +10,41 @@ import "./ClubSearch.css";
 interface Club {
   id: number;
   name: string;
-  city: string;
-  country: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  address?: string;
+  zip?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  holes?: number;
   logo_url?: string;
-  rating?: number;
   lat?: number;
   lon?: number;
+  avg_rating?: number;
+  rating_count?: number;
 }
 
 interface ClubSearchProps {
   initialClubs?: Club[];
+  initialSearch?: string;
+  initialCountry?: string;
+  initialState?: string;
 }
 
-// Leaflet Map dynamisch importieren (SSR disabled)
 const ClubMap = dynamic(() => import("./ClubMap"), { ssr: false });
 
-export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
+export default function ClubSearch({
+  initialClubs = [],
+  initialSearch = "",
+  initialCountry = "",
+  initialState = "",
+}: ClubSearchProps) {
   const [mounted, setMounted] = useState(false);
-  const [search, setSearch] = useState("");
-  const [country, setCountry] = useState("");
-  const [city, setCity] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [country, setCountry] = useState(initialCountry);
+  const [state, setState] = useState(initialState);
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,56 +57,73 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Client-only Flag + Lade User
+  // Client-only Flag + User laden
   useEffect(() => {
     setMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
   }, []);
 
-  // Filter & Sortierung
-  const filteredAllClubs = useMemo(() => {
-    const term = search.toLowerCase().trim();
-    return clubs.filter(c => {
-      const name = c.name.toLowerCase().trim();
-      const cityName = c.city.toLowerCase().trim();
-      const countryName = c.country.toLowerCase().trim();
+  // ---------------------------
+  // Suche/Filter
+  // ---------------------------
+  useEffect(() => {
+    const fetchFilteredClubs = async () => {
+      // Nur aktiv, wenn Filter gesetzt
+      if (!search && !country && !state) return;
 
-      const matchText = name.includes(term) || cityName.includes(term) || countryName.includes(term);
-      const matchCountry = country ? c.country === country : true;
-      const matchCity = city ? c.city === city : true;
-      return matchText && matchCountry && matchCity;
-    });
-  }, [clubs, search, country, city]);
+      try {
+        const params = new URLSearchParams();
+        if (search) params.append("search", search);
+        if (country) params.append("country", country);
+        if (state) params.append("state", state);
 
-  const filteredClubs = useMemo(() => {
-    const sorted = [...filteredAllClubs].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    if (!search && !country && !city) return sorted.slice(0, 100);
-    return sorted;
-  }, [filteredAllClubs, search, country, city]);
+        const res = await fetch(`/api/clubs?${params.toString()}`);
+        if (!res.ok) throw new Error("Fehler beim Laden der Clubs");
+        const data = await res.json();
+        setClubs(data);
+      } catch (err) {
+        console.error(err);
+        toast.error("Fehler beim Laden der Clubs");
+      }
+    };
 
-  const filteredCountryCount = useMemo(
-    () => new Set(filteredClubs.map(c => c.country)).size,
-    [filteredClubs]
-  );
+    fetchFilteredClubs();
+  }, [search, country, state]);
 
-  const countries = useMemo(() => Array.from(new Set(clubs.map(c => c.country))).sort(), [clubs]);
-  const cities = useMemo(() => {
-    const clubsToUse = country ? clubs.filter(c => c.country === country) : clubs;
-    return Array.from(new Set(clubsToUse.map(c => c.city))).sort();
-  }, [clubs, country]);
+  // ---------------------------
+  // Filteroptionen für Dropdowns
+  // ---------------------------
+  const currentClubs = (search || country || state) ? clubs : initialClubs;
 
+  const countries = Array.from(new Set(currentClubs.map(c => c.country))).sort();
+  const states = Array.from(
+    new Set(
+      currentClubs
+        .filter(c => !country || c.country === country)
+        .map(c => c.state ?? "")
+    )
+  ).sort();
+
+  // Map Center
+  const firstClubWithCoords = currentClubs.find(c => typeof c.lat === "number" && typeof c.lon === "number");
+  const mapCenter: [number, number] = firstClubWithCoords ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!] : [0, 0];
+
+  // ---------------------------
   // Club Card
+  // ---------------------------
   const ClubCard = ({ club }: { club: Club }) => (
     <div className="club-card" onClick={() => setSelectedClub(club)}>
       {club.logo_url && <img src={club.logo_url} alt={club.name} className="club-logo" />}
       <h3>{club.name}</h3>
-      <p>{club.city}, {club.country}</p>
+      <p>{club.city}, {club.state ? `${club.state}, ` : ""}{club.country}</p>
     </div>
   );
 
+  // ---------------------------
   // Overlay
+  // ---------------------------
   const ClubOverlay = ({ club, onClose }: { club: Club; onClose: () => void }) => {
-    const [rating, setRating] = useState<number>(club.rating || 0);
+    const [rating, setRating] = useState<number>(club.avg_rating || 0);
     const [scale, setScale] = useState(0.8);
     const [closing, setClosing] = useState(false);
 
@@ -122,7 +154,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
           } else return toast.error(`Fehler: ${error.message ?? "Unbekannt"}`);
         }
         setRating(value);
-        setClubs(prev => prev.map(c => (c.id === club.id ? { ...c, rating: value } : c)));
+        setClubs(prev => prev.map(c => (c.id === club.id ? { ...c, avg_rating: value } : c)));
         toast.success("Bewertung erfolgreich gespeichert!");
       } catch (err) {
         console.error("RPC JS Error:", err);
@@ -138,7 +170,14 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
           <button className="overlay-close" onClick={handleClose}>✕</button>
           {club.logo_url && <img src={club.logo_url} alt={club.name} className="club-logo-large" />}
           <h2>{club.name}</h2>
-          <p>{club.city}, {club.country}</p>
+          <p>{club.city}{club.state ? `, ${club.state}` : ""}, {club.country}</p>
+
+          {club.address && <p><strong>Address:</strong> {club.address}{club.zip ? `, ${club.zip}` : ""}</p>}
+          {club.website && <p><strong>Website:</strong> <a href={club.website} target="_blank" rel="noopener noreferrer">{club.website}</a></p>}
+          {club.email && <p><strong>Email:</strong> <a href={`mailto:${club.email}`}>{club.email}</a></p>}
+          {club.phone && <p><strong>Phone:</strong> {club.phone}</p>}
+          {club.holes && <p><strong>Holes:</strong> {club.holes}</p>}
+
           <div className="stars">
             {[1, 2, 3, 4, 5].map(i => (
               <span key={i} onClick={() => handleRating(i)} className={getStarClass(i)}>★</span>
@@ -150,11 +189,6 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
     );
   };
 
-  // Map Center
-  const firstClubWithCoords = filteredClubs.find(c => typeof c.lat === "number" && typeof c.lon === "number");
-  const mapCenter: [number, number] = firstClubWithCoords ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!] : [0, 0];
-
-  // Render nur nach Mount → Hydration fix
   if (!mounted) return null;
 
   return (
@@ -165,7 +199,7 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
         {/* Login */}
         <div className="login-inline-container">
           <button className="btn login-btn" onClick={() => setLoginOpen(prev => !prev)}>
-            {user ? `Eingeloggt als ${user.email} ▾` : "Login / Registrierung ▾"}
+            {user ? `Eingeloggt als ${user.email} ▾` : "login / register ▾"}
           </button>
           {loginOpen && (
             <div className="login-inline-panel">
@@ -180,24 +214,52 @@ export default function ClubSearch({ initialClubs = [] }: ClubSearchProps) {
 
         {/* Filter */}
         <div className="filters">
-          <input type="text" placeholder={!search && !country && !city ? "aktuell werden die 100 'besten' Clubs angezeigt..." : "Alle passenden Clubs werden angezeigt..."} value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder={!search && !country && !state ? "search by name" : "matching clubs are displayed..."} value={search} onChange={e => setSearch(e.target.value)} />
           <select value={country} onChange={e => setCountry(e.target.value)}>
-            <option value="">Alle Länder</option>
+            <option value="">select country</option>
             {countries.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={city} onChange={e => setCity(e.target.value)}>
-            <option value="">Alle Städte</option>
-            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          <select value={state} onChange={e => setState(e.target.value)}>
+            <option value="">select state</option>
+            {states.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
-        <h3>(Anzahl 'Suche/Filter' Clubs: {filteredClubs.length} / Länder: {filteredCountryCount})</h3>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+  <h3 style={{ margin: 0 }}>
+    {`Showing ${currentClubs.length} ${currentClubs.length === 1 ? "club" : "clubs"} across ${countries.length} ${countries.length === 1 ? "country" : "countries:"}`}
+  </h3>
+
+  {(search || country || state) && (
+    <button
+      className="reset-filters-btn"
+      style={{
+        padding: "6px 12px",
+        fontSize: "0.9rem",
+        borderRadius: "6px",
+        border: "1px solid #ccc",
+        backgroundColor: "#f5f5f5",
+        cursor: "pointer"
+      }}
+      onClick={() => {
+        setSearch("");
+        setCountry("");
+        setState("");
+        setClubs(initialClubs); // Top-100 wieder anzeigen
+      }}
+    >
+      Reset Filters
+    </button>
+  )}
+</div>
+
+
 
         {/* Leaflet Map */}
-        <ClubMap clubs={filteredClubs} mapCenter={mapCenter} onMarkerClick={c => setSelectedClub(c)} />
+        <ClubMap clubs={currentClubs} mapCenter={mapCenter} onMarkerClick={c => setSelectedClub(c)} />
 
         {/* Club Grid */}
-        <div className="club-grid">{filteredClubs.map(club => <ClubCard key={club.id} club={club} />)}</div>
+        <div className="club-grid">{currentClubs.map(club => <ClubCard key={club.id} club={club} />)}</div>
 
         {/* Overlay */}
         {selectedClub && <ClubOverlay club={selectedClub} onClose={() => setSelectedClub(null)} />}

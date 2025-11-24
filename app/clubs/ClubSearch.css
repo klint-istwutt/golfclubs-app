@@ -72,6 +72,7 @@
   justify-items: center;
   align-items: start;
   width: 100%;
+  margin-top: 20px;
 }
 
 .club-card {
@@ -455,4 +456,49 @@
 
 .leaflet-container.ctrl-zoom-active + .map-hint {
   display: none; /* Hinweis ausblenden, wenn STRG oder ⌘ gedrückt ist */
+}
+
+
+
+.club-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  padding: 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.club-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+}
+
+.club-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.club-card h3 {
+  margin: 4px 0;
+  font-size: 1.2rem;
+}
+
+.club-info {
+  margin: 2px 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.club-info a {
+  color: #1e88e5;
+  text-decoration: none;
+}
+
+.club-info a:hover {
+  text-decoration: underline;
 }

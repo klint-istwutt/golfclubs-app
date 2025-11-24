@@ -7,47 +7,55 @@ const supabase = createClient(
 
 export async function GET(req: Request) {
   try {
-    const { search, country, city } = Object.fromEntries(
+    const { search, country, state } = Object.fromEntries(
       new URL(req.url).searchParams
     );
 
-    // 🏗️ Grund-Query
-    let query = supabase.from("clubs").select("*");
+    let query = supabase
+      .from("clubs")
+      .select(`
+        id,
+        name,
+        city,
+        state,
+        country,
+        address,
+        zip,
+        website,
+        email,
+        phone,
+        holes,
+        logo_url,
+        rating,
+        lat,
+        lon
+      `);
 
-if (search && search.trim() !== "") {
-  const term = search.trim();
-  query = query.or(
-    `name.ilike."%${term}%",city.ilike."%${term}%",country.ilike."%${term}%"`
-  );
-}
+    if (search && search.trim() !== "") {
+      const term = search.trim();
+      query = query.or(`name.ilike.%${term}%,state.ilike.%${term}%,country.ilike.%${term}%`);
+    }
 
-
-    // 🌍 Länderfilter
     if (country && country.trim() !== "") {
       query = query.eq("country", country);
     }
 
-    // 🏙 Stadtfilter
-    if (city && city.trim() !== "") {
-      query = query.eq("city", city);
+    if (state && state.trim() !== "") {
+      query = query.eq("state", state);
     }
 
-    // 📦 Anfrage ausführen
     const { data, error } = await query;
 
-    // 🔎 Logging für Debug-Zwecke
     console.log(
       "[Clubs API]",
-      JSON.stringify({ search, country, city, resultCount: data?.length || 0 })
+      JSON.stringify({ search, country, state, resultCount: data?.length || 0 })
     );
 
-    // ❌ Fehlerbehandlung
     if (error) {
       console.error("[Clubs API] Fehler:", error.message);
-      return new Response(JSON.stringify([]), { status: 200 }); // leeres Array zurückgeben
+      return new Response(JSON.stringify([]), { status: 200 });
     }
 
-    // ✅ Immer ein Array zurückgeben
     return new Response(JSON.stringify(Array.isArray(data) ? data : []), {
       status: 200,
     });

@@ -45,13 +45,13 @@ export function LoginModal({ email, setEmail, password, setPassword, onClose, se
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h2>Login / Registrierung</h2>
+        <h2>login / register</h2>
         <input type="email" placeholder="E-Mail" value={email} onChange={e => setEmail(e.target.value)} />
         <input type="password" placeholder="Passwort" value={password} onChange={e => setPassword(e.target.value)} />
         {errorMessage && <p className="error-text">{errorMessage}</p>}
         <div className="login-buttons">
-          <button className="btn login-btn" onClick={handleLogin} disabled={loading}>Login</button>
-          <button className="btn register-btn" onClick={handleSignUp} disabled={loading}>Registrieren</button>
+          <button className="btn login-btn" onClick={handleLogin} disabled={loading}>login</button>
+          <button className="btn register-btn" onClick={handleSignUp} disabled={loading}>register</button>
         </div>
       </div>
     </div>
