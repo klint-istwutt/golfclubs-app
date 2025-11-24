@@ -6,15 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useState } from "react";
 import L from "leaflet";
 
-interface Club {
-  id: number;
-  name: string;
-  city: string;
-  country: string;
-  rating?: number;
-  lat?: number;
-  lon?: number;
-}
+import { Club } from "../types";
 
 interface ClubMapProps {
   clubs: Club[];
