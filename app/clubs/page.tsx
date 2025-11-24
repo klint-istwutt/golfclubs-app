@@ -45,14 +45,23 @@ export default async function ClubsPage({ searchParams }: { searchParams: ClubsQ
   if (topError) console.error("Supabase fetch error:", topError.message ?? topError);
 
   // ------------------------------
-  // Optional: Gesamtzahl Clubs und Länder
+  // Gesamtzahl Clubs
   // ------------------------------
-  const countryCount = initialClubs ? new Set(initialClubs.map(c => c.country)).size : 0;
-
   const { count: clubCount, error: countError } = await supabase
     .from("clubs")
     .select("*", { count: "exact", head: true });
   if (countError) console.error("Supabase count error:", countError?.message ?? countError);
+
+  // ------------------------------
+  // Gesamtzahl Länder
+  // ------------------------------
+  const { data: countriesData, error: countriesError } = await supabase
+    .from("clubs")
+    .select("country", { count: "exact" })
+    .neq("country", null); // optional: null ausschließen
+  if (countriesError) console.error("Supabase countries fetch error:", countriesError?.message ?? countriesError);
+
+  const countryCount = countriesData ? new Set(countriesData.map(c => c.country)).size : 0;
 
   return (
     <main style={{ padding: "5px" }}>

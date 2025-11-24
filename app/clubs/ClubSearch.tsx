@@ -6,13 +6,18 @@ import dynamic from "next/dynamic";
 import { LoginModal } from "./LoginModal";
 import toast, { Toaster } from "react-hot-toast";
 import "./ClubSearch.css";
-import { Club } from "../types"; // Pfad anpassen
+import { Club } from "../types";
 
 interface ClubSearchProps {
   initialClubs?: Club[];
   initialSearch?: string;
   initialCountry?: string;
   initialState?: string;
+}
+
+interface Options {
+  countries: string[];
+  states: string[];
 }
 
 const ClubMap = dynamic(() => import("./ClubMap"), { ssr: false });
@@ -32,27 +37,61 @@ export default function ClubSearch({
   const [password, setPassword] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
-  const [clubs, setClubs] = useState<Club[]>(initialClubs);
+
+  const [filteredClubs, setFilteredClubs] = useState<Club[] | null>(null);
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
+
+  const [countryOptions, setCountryOptions] = useState<string[]>([]);
+  const [stateOptions, setStateOptions] = useState<string[]>([]);
 
   const supabase: SupabaseClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Client-only Flag + User laden
+  // ---------------------------
+  // Mount + User + alle Clubs für Dropdowns laden
+  // ---------------------------
   useEffect(() => {
     setMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
-  }, []);
+
+    const fetchAllClubs = async () => {
+      try {
+        const res = await fetch("/api/clubs");
+        if (!res.ok) throw new Error("Fehler beim Laden der Clubs");
+        const data: Club[] = await res.json();
+        setAllClubs(data);
+
+        // initial Dropdowns auf alle DB-Werte setzen
+        setCountryOptions(Array.from(new Set(data.map(c => c.country))).sort());
+        setStateOptions(Array.from(new Set(data.map(c => c.state ?? ""))).sort());
+      } catch (err) {
+        console.error(err);
+        // fallback: initialClubs
+        setAllClubs(initialClubs);
+        setCountryOptions(Array.from(new Set(initialClubs.map(c => c.country))).sort());
+        setStateOptions(Array.from(new Set(initialClubs.map(c => c.state ?? ""))).sort());
+      }
+    };
+
+    fetchAllClubs();
+  }, [initialClubs]);
 
   // ---------------------------
-  // Suche/Filter
+  // Filter / Suche
   // ---------------------------
   useEffect(() => {
-    const fetchFilteredClubs = async () => {
-      // Nur aktiv, wenn Filter gesetzt
-      if (!search && !country && !state) return;
+    const filtersActive = Boolean(search || country || state);
+    if (!filtersActive) {
+      setFilteredClubs(null);
+      // Dropdowns bleiben auf allen DB-Werten
+      setCountryOptions(Array.from(new Set(allClubs.map(c => c.country))).sort());
+      setStateOptions(Array.from(new Set(allClubs.map(c => c.state ?? ""))).sort());
+      return;
+    }
 
+    const fetchFiltered = async () => {
       try {
         const params = new URLSearchParams();
         if (search) params.append("search", search);
@@ -61,37 +100,42 @@ export default function ClubSearch({
 
         const res = await fetch(`/api/clubs?${params.toString()}`);
         if (!res.ok) throw new Error("Fehler beim Laden der Clubs");
-        const data = await res.json();
-        setClubs(data);
+        const data: Club[] = await res.json();
+        setFilteredClubs(data);
+
+        // Dropdowns aus gefilterten Daten ableiten
+        const countries = Array.from(new Set(data.map(c => c.country))).sort();
+        let states: string[] = [];
+        if (country) {
+          states = Array.from(new Set(data.filter(c => c.country === country).map(c => c.state ?? ""))).sort();
+        } else {
+          states = Array.from(new Set(data.map(c => c.state ?? ""))).sort();
+        }
+        setCountryOptions(countries);
+        setStateOptions(states);
       } catch (err) {
         console.error(err);
         toast.error("Fehler beim Laden der Clubs");
       }
     };
 
-    fetchFilteredClubs();
-  }, [search, country, state]);
+    fetchFiltered();
+  }, [search, country, state, allClubs]);
 
   // ---------------------------
-  // Filteroptionen für Dropdowns
+  // Aktuell angezeigte Clubs
   // ---------------------------
-  const currentClubs = (search || country || state) ? clubs : initialClubs;
+  const currentClubs = filteredClubs ?? initialClubs;
+  const filtersActive = Boolean(search || country || state);
 
-  const countries = Array.from(new Set(currentClubs.map(c => c.country))).sort();
-  const states = Array.from(
-    new Set(
-      currentClubs
-        .filter(c => !country || c.country === country)
-        .map(c => c.state ?? "")
-    )
-  ).sort();
-
+  // ---------------------------
   // Map Center
+  // ---------------------------
   const firstClubWithCoords = currentClubs.find(c => typeof c.lat === "number" && typeof c.lon === "number");
   const mapCenter: [number, number] = firstClubWithCoords ? [firstClubWithCoords.lat!, firstClubWithCoords.lon!] : [0, 0];
 
   // ---------------------------
-  // Club Card
+  // ClubCard
   // ---------------------------
   const ClubCard = ({ club }: { club: Club }) => (
     <div className="club-card" onClick={() => setSelectedClub(club)}>
@@ -102,7 +146,7 @@ export default function ClubSearch({
   );
 
   // ---------------------------
-  // Overlay
+  // ClubOverlay
   // ---------------------------
   const ClubOverlay = ({ club, onClose }: { club: Club; onClose: () => void }) => {
     const [rating, setRating] = useState<number>(club.avg_rating || 0);
@@ -127,20 +171,22 @@ export default function ClubSearch({
       try {
         const { error } = await supabase.rpc("insert_rating", {
           p_club: Number(club.id),
-          p_rating: Number(value)
+          p_rating: Number(value),
         });
         if (error) {
-          console.error("RPC Insert Error:", error);
           if (error.code === "23505" || (error.message && error.message.includes("duplicate key"))) {
             return toast.error("Du hast diesen Club bereits bewertet.");
-          } else return toast.error(`Fehler: ${error.message ?? "Unbekannt"}`);
+          }
+          return toast.error(`Fehler: ${error.message ?? "Unbekannt"}`);
         }
         setRating(value);
-        setClubs(prev => prev.map(c => (c.id === club.id ? { ...c, avg_rating: value } : c)));
-        toast.success("Bewertung erfolgreich gespeichert!");
+        if (filteredClubs) {
+          setFilteredClubs(prev => prev?.map(c => (c.id === club.id ? { ...c, avg_rating: value } : c)) ?? []);
+        }
+        toast.success("Bewertung gespeichert!");
       } catch (err) {
-        console.error("RPC JS Error:", err);
-        toast.error("Fehler beim Speichern (JS).");
+        console.error(err);
+        toast.error("Fehler beim Speichern.");
       }
     };
 
@@ -196,52 +242,52 @@ export default function ClubSearch({
 
         {/* Filter */}
         <div className="filters">
-          <input type="text" placeholder={!search && !country && !state ? "search by name" : "matching clubs are displayed..."} value={search} onChange={e => setSearch(e.target.value)} />
+          <input
+            type="text"
+            placeholder={!filtersActive ? "search by name" : "matching clubs are displayed..."}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
           <select value={country} onChange={e => setCountry(e.target.value)}>
             <option value="">select country</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
+            {countryOptions.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select value={state} onChange={e => setState(e.target.value)}>
             <option value="">select state</option>
-            {states.map(s => <option key={s} value={s}>{s}</option>)}
+            {stateOptions.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-  <h3 style={{ margin: 0 }}>
-    {`Showing ${currentClubs.length} ${currentClubs.length === 1 ? "club" : "clubs"} across ${countries.length} ${countries.length === 1 ? "country" : "countries:"}`}
-  </h3>
+        {/* Info & Reset */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+          <h3 style={{ margin: 0 }}>
+ {`Showing ${currentClubs.length} ${currentClubs.length === 1 ? "club" : "clubs"} across ${new Set(currentClubs.map(c => c.country)).size} ${new Set(currentClubs.map(c => c.country)).size === 1 ? "country" : "countries"}`}
+          </h3>
+          {filtersActive && (
+            <button
+              className="reset-filters-btn"
+              style={{ padding: "6px 12px", fontSize: "0.9rem", borderRadius: "6px", border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer" }}
+              onClick={() => {
+                setSearch("");
+                setCountry("");
+                setState("");
+                setFilteredClubs(null);
+                setCountryOptions(Array.from(new Set(allClubs.map(c => c.country))).sort());
+                setStateOptions(Array.from(new Set(allClubs.map(c => c.state ?? ""))).sort());
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
 
-  {(search || country || state) && (
-    <button
-      className="reset-filters-btn"
-      style={{
-        padding: "6px 12px",
-        fontSize: "0.9rem",
-        borderRadius: "6px",
-        border: "1px solid #ccc",
-        backgroundColor: "#f5f5f5",
-        cursor: "pointer"
-      }}
-      onClick={() => {
-        setSearch("");
-        setCountry("");
-        setState("");
-        setClubs(initialClubs); // Top-100 wieder anzeigen
-      }}
-    >
-      Reset Filters
-    </button>
-  )}
-</div>
-
-
-
-        {/* Leaflet Map */}
+        {/* Map */}
         <ClubMap clubs={currentClubs} mapCenter={mapCenter} onMarkerClick={c => setSelectedClub(c)} />
 
-        {/* Club Grid */}
-        <div className="club-grid">{currentClubs.map(club => <ClubCard key={club.id} club={club} />)}</div>
+        {/* Grid */}
+        <div className="club-grid">
+          {currentClubs.map(club => <ClubCard key={club.id} club={club} />)}
+        </div>
 
         {/* Overlay */}
         {selectedClub && <ClubOverlay club={selectedClub} onClose={() => setSelectedClub(null)} />}
