@@ -6,25 +6,7 @@ import dynamic from "next/dynamic";
 import { LoginModal } from "./LoginModal";
 import toast, { Toaster } from "react-hot-toast";
 import "./ClubSearch.css";
-
-interface Club {
-  id: number;
-  name: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  address?: string;
-  zip?: string;
-  website?: string;
-  email?: string;
-  phone?: string;
-  holes?: number;
-  logo_url?: string;
-  lat?: number;
-  lon?: number;
-  avg_rating?: number;
-  rating_count?: number;
-}
+import { Club } from "../types"; // Pfad anpassen
 
 interface ClubSearchProps {
   initialClubs?: Club[];
