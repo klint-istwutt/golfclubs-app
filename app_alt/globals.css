@@ -1,9 +1,27 @@
 /* app/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-/* eigene Komponenten-spezifische CSS-Klassen behalten */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Grid für Clubs */
 .clubs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -12,6 +30,7 @@
   margin: 0 auto;
 }
 
+/* Club-Karten */
 .club-card {
   background: #fff;
   border-radius: 12px;
@@ -28,13 +47,13 @@
 }
 
 .club-card img {
-  width: 100%;
-  height: auto;
-  max-height: 160px;
-  object-fit: contain;
+  width: 100%;          /* volle Breite der Karte */
+  height: auto;         /* Höhe automatisch, proportional */
+  max-height: 160px;    /* optional: maximale Höhe */
+  object-fit: contain;  /* Bild wird vollständig angezeigt */
   border-bottom: 1px solid #eee;
   border-radius: 12px 12px 0 0;
-  background-color: #f9f9f9;
+  background-color: #f9f9f9; /* optional, Hintergrund falls Logos transparent */
 }
 
 .club-card-content {

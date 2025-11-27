@@ -1,52 +1,23 @@
 {
-  "name": "golfclubs-app",
-  "version": "0.1.0",
+  "name": "my-clubs-app",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.28.1",
-    "@chakra-ui/theme": "^3.4.6",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/auth-helpers-react": "^0.5.0",
-    "@supabase/supabase-js": "^2.84.0",
-    "cloudinary": "^2.8.0",
-    "dotenv": "^17.2.3",
-    "framer-motion": "^12.23.24",
+    "@supabase/supabase-js": "^2.32.0",
     "leaflet": "^1.9.4",
-    "next": "^16.0.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-hot-toast": "^2.6.0",
-    "react-leaflet": "^5.0.0"
+    "next": "13.5.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-leaflet": "^4.3.1"
   },
   "devDependencies": {
-    "@types/leaflet": "^1.9.21",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.1",
-    "typescript": "^5"
-  },
-  "description": "",
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/klint-istwutt/golfclubs-app.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/klint-istwutt/golfclubs-app/issues"
-  },
-  "homepage": "https://github.com/klint-istwutt/golfclubs-app#readme"
+    "typescript": "^5.2.2"
+  }
 }

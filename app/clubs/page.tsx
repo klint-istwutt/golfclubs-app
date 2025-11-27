@@ -1,100 +1,36 @@
+
+
 import { createClient } from "@supabase/supabase-js";
-import ClubSearch from "./ClubSearch";
+import StatsBar from "../../components/StatsBar";
+import ClubSearch from "../../components/ClubSearch";
 import Link from "next/link";
 
-interface ClubsQuery {
-  search?: string;
-  country?: string;
-  state?: string;
-}
-
-interface Club {
-  id: number;
-  name: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  address?: string;
-  zip?: string;
-  website?: string;
-  email?: string;
-  phone?: string;
-  holes?: number;
-  logo_url?: string;
-  lat?: number;
-  lon?: number;
-  avg_rating?: number;
-  rating_count?: number;
-}
-
-export default async function ClubsPage({ searchParams }: { searchParams: ClubsQuery }) {
+export default async function ClubsPage({ searchParams }: any) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const { search = "", country = "", state = "" } = searchParams || {};
-
-  // ------------------------------
-  // Top 100 Clubs beim Laden
-  // ------------------------------
-  const { data: initialClubs, error: topError } = await supabase
-    .from("top_100_clubs")
-    .select("*");
-
-  if (topError) console.error("Supabase fetch error:", topError.message ?? topError);
-
-  // ------------------------------
-  // Gesamtzahl Clubs
-  // ------------------------------
-  const { count: clubCount, error: countError } = await supabase
+  const { count: clubCount } = await supabase
     .from("clubs")
     .select("*", { count: "exact", head: true });
-  if (countError) console.error("Supabase count error:", countError?.message ?? countError);
 
-  // ------------------------------
-  // Gesamtzahl Länder
-  // ------------------------------
-  const { data: countriesData, error: countriesError } = await supabase
+  const { data: countriesData } = await supabase
     .from("clubs")
-    .select("country", { count: "exact" })
-    .neq("country", null); // optional: null ausschließen
-  if (countriesError) console.error("Supabase countries fetch error:", countriesError?.message ?? countriesError);
+    .select("country")
+    .neq("country", null);
 
-  const countryCount = countriesData ? new Set(countriesData.map(c => c.country)).size : 0;
+  const countryCount = new Set(countriesData.map(c => c.country)).size;
 
   return (
-    <main style={{ padding: "5px" }}>
-      <h1
-        style={{
-          textAlign: "center",
-          fontSize: "1.5rem",
-          marginBottom: "24px",
-        }}
-      >
-        {clubCount} Clubs in {countryCount} Countries
-      </h1>
+    <main>
+      <StatsBar clubCount={clubCount ?? 0} countryCount={countryCount} />
 
-      <ClubSearch
-        initialClubs={initialClubs || []}
-        initialSearch={search}
-        initialCountry={country}
-        initialState={state}
-      />
+      <div className="max-w-6xl mx-auto px-4 mt-6">
+        <ClubSearch />
+      </div>
 
-      <footer
-        style={{
-          marginTop: "40px",
-          textAlign: "center",
-          fontSize: "0.9rem",
-          color: "#555",
-        }}
-      >
-        <Link href="/impressum" style={{ marginRight: "15px" }}>
-          Impressum
-        </Link>
-        <Link href="/datenschutz">Datenschutzerklärung</Link>
-      </footer>
+
     </main>
   );
 }

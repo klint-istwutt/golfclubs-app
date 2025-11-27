@@ -15,11 +15,6 @@ interface ClubSearchProps {
   initialState?: string;
 }
 
-interface Options {
-  countries: string[];
-  states: string[];
-}
-
 const ClubMap = dynamic(() => import("./ClubMap"), { ssr: false });
 
 export default function ClubSearch({
@@ -38,8 +33,8 @@ export default function ClubSearch({
   const [loginOpen, setLoginOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
 
-  const [filteredClubs, setFilteredClubs] = useState<Club[] | null>(null);
   const [allClubs, setAllClubs] = useState<Club[]>([]);
+  const [filteredClubs, setFilteredClubs] = useState<Club[] | null>(null);
 
   const [countryOptions, setCountryOptions] = useState<string[]>([]);
   const [stateOptions, setStateOptions] = useState<string[]>([]);
@@ -50,7 +45,7 @@ export default function ClubSearch({
   );
 
   // ---------------------------
-  // Mount + User + alle Clubs für Dropdowns laden
+  // Mount + User + alle Clubs laden
   // ---------------------------
   useEffect(() => {
     setMounted(true);
@@ -68,7 +63,6 @@ export default function ClubSearch({
         setStateOptions(Array.from(new Set(data.map(c => c.state ?? ""))).sort());
       } catch (err) {
         console.error(err);
-        // fallback: initialClubs
         setAllClubs(initialClubs);
         setCountryOptions(Array.from(new Set(initialClubs.map(c => c.country))).sort());
         setStateOptions(Array.from(new Set(initialClubs.map(c => c.state ?? ""))).sort());
@@ -76,18 +70,16 @@ export default function ClubSearch({
     };
 
     fetchAllClubs();
-  }, [initialClubs]);
+  }, []); // nur beim Mount
 
   // ---------------------------
   // Filter / Suche
   // ---------------------------
   useEffect(() => {
     const filtersActive = Boolean(search || country || state);
+
     if (!filtersActive) {
       setFilteredClubs(null);
-      // Dropdowns bleiben auf allen DB-Werten
-      setCountryOptions(Array.from(new Set(allClubs.map(c => c.country))).sort());
-      setStateOptions(Array.from(new Set(allClubs.map(c => c.state ?? ""))).sort());
       return;
     }
 
@@ -103,14 +95,12 @@ export default function ClubSearch({
         const data: Club[] = await res.json();
         setFilteredClubs(data);
 
-        // Dropdowns aus gefilterten Daten ableiten
+        // Dropdowns nur aus gefilterten Daten ableiten
         const countries = Array.from(new Set(data.map(c => c.country))).sort();
-        let states: string[] = [];
-        if (country) {
-          states = Array.from(new Set(data.filter(c => c.country === country).map(c => c.state ?? ""))).sort();
-        } else {
-          states = Array.from(new Set(data.map(c => c.state ?? ""))).sort();
-        }
+        const states = country
+          ? Array.from(new Set(data.filter(c => c.country === country).map(c => c.state ?? ""))).sort()
+          : Array.from(new Set(data.map(c => c.state ?? ""))).sort();
+
         setCountryOptions(countries);
         setStateOptions(states);
       } catch (err) {
@@ -120,12 +110,12 @@ export default function ClubSearch({
     };
 
     fetchFiltered();
-  }, [search, country, state, allClubs]);
+  }, [search, country, state]);
 
   // ---------------------------
   // Aktuell angezeigte Clubs
   // ---------------------------
-  const currentClubs = filteredClubs ?? initialClubs;
+  const currentClubs = filteredClubs ?? allClubs.slice(0, 100);
   const filtersActive = Boolean(search || country || state);
 
   // ---------------------------
@@ -263,22 +253,25 @@ export default function ClubSearch({
           <h3 style={{ margin: 0 }}>
  {`Showing ${currentClubs.length} ${currentClubs.length === 1 ? "club" : "clubs"} across ${new Set(currentClubs.map(c => c.country)).size} ${new Set(currentClubs.map(c => c.country)).size === 1 ? "country" : "countries"}`}
           </h3>
-          {filtersActive && (
-            <button
-              className="reset-filters-btn"
-              style={{ padding: "6px 12px", fontSize: "0.9rem", borderRadius: "6px", border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer" }}
-              onClick={() => {
-                setSearch("");
-                setCountry("");
-                setState("");
-                setFilteredClubs(null);
-                setCountryOptions(Array.from(new Set(allClubs.map(c => c.country))).sort());
-                setStateOptions(Array.from(new Set(allClubs.map(c => c.state ?? ""))).sort());
-              }}
-            >
-              Reset Filters
-            </button>
-          )}
+{filtersActive && (
+  <button
+    className="reset-filters-btn"
+    style={{ padding: "6px 12px", fontSize: "0.9rem", borderRadius: "6px", border: "1px solid #ccc", backgroundColor: "#f5f5f5", cursor: "pointer" }}
+    onClick={() => {
+      setSearch("");
+      setCountry("");
+      setState("");
+      setFilteredClubs(null);
+
+      // Dropdowns auf alle Clubs zurücksetzen
+      setCountryOptions(Array.from(new Set(allClubs.map(c => c.country))).sort());
+      setStateOptions(Array.from(new Set(allClubs.map(c => c.state ?? ""))).sort());
+    }}
+  >
+    Reset Filters
+  </button>
+)}
+
         </div>
 
         {/* Map */}
